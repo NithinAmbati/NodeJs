@@ -18,205 +18,209 @@ const startServer = () => {
 
 startServer();
 
-const dbURI = process.env.MONGO_URL;
-
-mongoose
-  .connect(dbURI)
-  .then(() => console.log("MongoDB connected successfully"))
-  .catch((err) => console.error("MongoDB connection error:", err));
-
-const userSchema = new mongoose.Schema({
-  username: String,
-  password: String,
-  status: String,
+app.get("/", (req, res) => {
+  return res.status(200).send("HELLO");
 });
 
-const roomSchema = new mongoose.Schema({
-  price: String,
-  name: String,
-  rating: String,
-  description: String,
-  status: { type: String, required: true },
-  fromDate: { type: Date, required: true },
-  toDate: { type: Date, required: true },
-  bookedBy: { type: String, required: true },
-  email: { type: String, required: true },
-  contact: { type: Number, required: true },
-});
+// const dbURI = process.env.MONGO_URL;
 
-const querySchema = new mongoose.Schema({
-  name: String,
-  email: String,
-  subject: String,
-  message: String,
-  status: String,
-});
+// mongoose
+//   .connect(dbURI)
+//   .then(() => console.log("MongoDB connected successfully"))
+//   .catch((err) => console.error("MongoDB connection error:", err));
 
-const User = mongoose.model("user-login", userSchema);
-const Room = mongoose.model("rooms", roomSchema);
-const Queries = mongoose.model("queries", querySchema);
+// const userSchema = new mongoose.Schema({
+//   username: String,
+//   password: String,
+//   status: String,
+// });
 
-//Employee Login
-app.post("/login", async (req, res) => {
-  const { username, password } = req.body;
+// const roomSchema = new mongoose.Schema({
+//   price: String,
+//   name: String,
+//   rating: String,
+//   description: String,
+//   status: { type: String, required: true },
+//   fromDate: { type: Date, required: true },
+//   toDate: { type: Date, required: true },
+//   bookedBy: { type: String, required: true },
+//   email: { type: String, required: true },
+//   contact: { type: Number, required: true },
+// });
 
-  try {
-    const user = await User.findOne({ username, password });
-    if (!user) {
-      res.status(400).send("Login Failure");
-      return;
-    }
-    const payload = {
-      username: username,
-    };
-    const jwtToken = jwt.sign(payload, "Nithin");
-    res.status(201).send({ jwtToken });
-  } catch (error) {
-    res.status(500).send("Internal Server Error");
-  }
-});
+// const querySchema = new mongoose.Schema({
+//   name: String,
+//   email: String,
+//   subject: String,
+//   message: String,
+//   status: String,
+// });
 
-//Display Employees
-app.get("/", async (req, res) => {
-  const username = await User.findOne();
-  res.send(username);
-});
+// const User = mongoose.model("user-login", userSchema);
+// const Room = mongoose.model("rooms", roomSchema);
+// const Queries = mongoose.model("queries", querySchema);
 
-//Display Rooms
-app.get("/rooms", async (req, res) => {
-  const roomDetails = await Room.find();
-  res.status(200).send(roomDetails);
-});
+// //Employee Login
+// app.post("/login", async (req, res) => {
+//   const { username, password } = req.body;
 
-//Is Rooms Available or Not
-app.post("/rooms", async (req, res) => {
-  const { fromDate, toDate } = req.body;
+//   try {
+//     const user = await User.findOne({ username, password });
+//     if (!user) {
+//       res.status(400).send("Login Failure");
+//       return;
+//     }
+//     const payload = {
+//       username: username,
+//     };
+//     const jwtToken = jwt.sign(payload, "Nithin");
+//     res.status(201).send({ jwtToken });
+//   } catch (error) {
+//     res.status(500).send("Internal Server Error");
+//   }
+// });
 
-  if (!fromDate || !toDate) {
-    return res
-      .status(400)
-      .send("Invalid request: fromDate and toDate are required.");
-  }
+// //Display Employees
+// app.get("/", async (req, res) => {
+//   const username = await User.findOne();
+//   res.send(username);
+// });
 
-  try {
-    const roomDetails = await Room.find({
-      $or: [{ status: "Book Now" }, { toDate: { $lte: fromDate } }],
-    });
+// //Display Rooms
+// app.get("/rooms", async (req, res) => {
+//   const roomDetails = await Room.find();
+//   res.status(200).send(roomDetails);
+// });
 
-    if (roomDetails.length !== 0) {
-      return res.status(200).send("Available");
-    } else {
-      return res.status(400).send("Not Available");
-    }
-  } catch (error) {
-    console.error(error);
-    return res.status(500).send("Server error");
-  }
-});
+// //Is Rooms Available or Not
+// app.post("/rooms", async (req, res) => {
+//   const { fromDate, toDate } = req.body;
 
-//Room Booking API
-app.post("/rooms/booking/:id", async (req, res) => {
-  const { id } = req.params;
-  const { name, fromDate, toDate, email, contact } = req.body;
-  const isThere = await Room.find({
-    status: "Book Now",
-  });
-  if (isThere.length === 0) res.status(200).send("NOT Available..");
-  await Room.updateOne(
-    { $and: [{ _id: `${id}` }, { status: "Book Now" }] },
-    {
-      $set: {
-        status: "Booked",
-        fromDate: fromDate,
-        toDate: toDate,
-        bookedBy: name,
-        email: email,
-        contact: contact,
-      },
-    }
-  )
-    .then(async (result) => {
-      await sendEmail(email, fromDate, toDate, id);
-      res.status(200).send("Booked SuccesFully");
-    })
-    .catch((error) => {
-      res.status(400).send("Failed To Book");
-    });
-});
+//   if (!fromDate || !toDate) {
+//     return res
+//       .status(400)
+//       .send("Invalid request: fromDate and toDate are required.");
+//   }
 
-//Updating rooms after timeout
-const updateRooms = async () => {
-  try {
-    const presentDate = new Date();
+//   try {
+//     const roomDetails = await Room.find({
+//       $or: [{ status: "Book Now" }, { toDate: { $lte: fromDate } }],
+//     });
 
-    const result = await Room.updateMany(
-      {
-        status: "Booked",
-        fromDate: { $ne: "" },
-        toDate: { $lte: presentDate },
-      },
-      {
-        $set: { fromDate: "", toDate: "", status: "Book Now" },
-      }
-    );
-  } catch (error) {
-    console.error("Error updating rooms:", error);
-  }
-};
+//     if (roomDetails.length !== 0) {
+//       return res.status(200).send("Available");
+//     } else {
+//       return res.status(400).send("Not Available");
+//     }
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).send("Server error");
+//   }
+// });
 
-updateRooms();
+// //Room Booking API
+// app.post("/rooms/booking/:id", async (req, res) => {
+//   const { id } = req.params;
+//   const { name, fromDate, toDate, email, contact } = req.body;
+//   const isThere = await Room.find({
+//     status: "Book Now",
+//   });
+//   if (isThere.length === 0) res.status(200).send("NOT Available..");
+//   await Room.updateOne(
+//     { $and: [{ _id: `${id}` }, { status: "Book Now" }] },
+//     {
+//       $set: {
+//         status: "Booked",
+//         fromDate: fromDate,
+//         toDate: toDate,
+//         bookedBy: name,
+//         email: email,
+//         contact: contact,
+//       },
+//     }
+//   )
+//     .then(async (result) => {
+//       await sendEmail(email, fromDate, toDate, id);
+//       res.status(200).send("Booked SuccesFully");
+//     })
+//     .catch((error) => {
+//       res.status(400).send("Failed To Book");
+//     });
+// });
 
-//post queries
-app.post("/queries", async (req, res) => {
-  const { name, email, subject, message } = req.body;
-  try {
-    const newQuery = new Queries({
-      name: name,
-      email: email,
-      subject: subject,
-      message: message,
-      status: "pending",
-    });
-    await newQuery.save();
-    return res.status(200).send("Inserted Successfully");
-  } catch (error) {
-    return res.status(500).send("Error while inserting.");
-  }
-});
+// //Updating rooms after timeout
+// const updateRooms = async () => {
+//   try {
+//     const presentDate = new Date();
 
-//Display Queries
-app.get("/queries", async (req, res) => {
-  try {
-    const result = await Queries.find();
-    res.status(200).send(result);
-  } catch {
-    res.status(400).send("Error");
-  }
-});
+//     const result = await Room.updateMany(
+//       {
+//         status: "Booked",
+//         fromDate: { $ne: "" },
+//         toDate: { $lte: presentDate },
+//       },
+//       {
+//         $set: { fromDate: "", toDate: "", status: "Book Now" },
+//       }
+//     );
+//   } catch (error) {
+//     console.error("Error updating rooms:", error);
+//   }
+// };
 
-//Send Email
+// updateRooms();
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: "mdinesh3026@gmail.com",
-    pass: "nvhw oxjq uyum sdts",
-  },
-});
+// //post queries
+// app.post("/queries", async (req, res) => {
+//   const { name, email, subject, message } = req.body;
+//   try {
+//     const newQuery = new Queries({
+//       name: name,
+//       email: email,
+//       subject: subject,
+//       message: message,
+//       status: "pending",
+//     });
+//     await newQuery.save();
+//     return res.status(200).send("Inserted Successfully");
+//   } catch (error) {
+//     return res.status(500).send("Error while inserting.");
+//   }
+// });
 
-const sendEmail = (email, fromDate, toDate, id) => {
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: email,
-    subject: "STAR-NIVAS",
-    text: `Room with roomId: ${id} has been successfully Booked from ${fromDate} to ${toDate}.
-    Amount Paid..`,
-  };
+// //Display Queries
+// app.get("/queries", async (req, res) => {
+//   try {
+//     const result = await Queries.find();
+//     res.status(200).send(result);
+//   } catch {
+//     res.status(400).send("Error");
+//   }
+// });
 
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      return res.status(500).send({ message: "Error sending email", error });
-    }
-    res.status(200).send({ message: "Msg Sent sucesfully" });
-  });
-};
+// //Send Email
+
+// const transporter = nodemailer.createTransport({
+//   service: "gmail",
+//   auth: {
+//     user: "mdinesh3026@gmail.com",
+//     pass: "nvhw oxjq uyum sdts",
+//   },
+// });
+
+// const sendEmail = (email, fromDate, toDate, id) => {
+//   const mailOptions = {
+//     from: process.env.EMAIL_USER,
+//     to: email,
+//     subject: "STAR-NIVAS",
+//     text: `Room with roomId: ${id} has been successfully Booked from ${fromDate} to ${toDate}.
+//     Amount Paid..`,
+//   };
+
+//   transporter.sendMail(mailOptions, (error, info) => {
+//     if (error) {
+//       return res.status(500).send({ message: "Error sending email", error });
+//     }
+//     res.status(200).send({ message: "Msg Sent sucesfully" });
+//   });
+// };
